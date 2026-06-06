@@ -114,6 +114,53 @@ final class NativeCompileTest extends TestCase
         self::assertSame("200\n", $out);
     }
 
+    public function test_string_concatenation(): void
+    {
+        $out = $this->compileAndRun('display("hello" + " " + "world");');
+        self::assertSame("hello world\n", $out);
+    }
+
+    public function test_string_equality(): void
+    {
+        $out = $this->compileAndRun(
+            'if ("a" + "b" == "ab") { display(1); } else { display(0); }'
+        );
+        self::assertSame("1\n", $out);
+    }
+
+    public function test_user_function_call(): void
+    {
+        $out = $this->compileAndRun('let add = fn(a, b) { a + b }; display(add(3, 4));');
+        self::assertSame("7\n", $out);
+    }
+
+    public function test_recursive_factorial(): void
+    {
+        $out = $this->compileAndRun(
+            "let fact = fn(n) { if (n <= 1) { 1 } else { n * fact(n - 1) } };\n" .
+            "display(fact(5));"
+        );
+        self::assertSame("120\n", $out);
+    }
+
+    public function test_recursive_fibonacci(): void
+    {
+        $out = $this->compileAndRun(
+            "let fib = fn(n) { if (n < 2) { n } else { fib(n - 1) + fib(n - 2) } };\n" .
+            "display(fib(10));"
+        );
+        self::assertSame("55\n", $out);
+    }
+
+    public function test_nested_function_calls(): void
+    {
+        $out = $this->compileAndRun(
+            "let inc = fn(x) { x + 1 }; let sq = fn(x) { x * x };\n" .
+            "display(sq(inc(3)));"
+        );
+        self::assertSame("16\n", $out);
+    }
+
     public function test_binary_exits_zero(): void
     {
         // A clean run: the @main wrapper returns the i32 from @fel_main (0).

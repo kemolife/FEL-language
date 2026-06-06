@@ -142,6 +142,30 @@ static double fel_to_float(FelVal *v) {
 }
 
 FelVal *fel_binop(int8_t op, FelVal *left, FelVal *right) {
+    /* String operations (both strings): concat and equality */
+    if (left->tag == FEL_STRING && right->tag == FEL_STRING) {
+        FelStr *ls = (FelStr *)(uintptr_t)left->payload;
+        FelStr *rs = (FelStr *)(uintptr_t)right->payload;
+        switch (op) {
+            case 1: { /* concatenation */
+                int64_t n = ls->len + rs->len;
+                char *buf = malloc((size_t)n + 1);
+                memcpy(buf, ls->data, (size_t)ls->len);
+                memcpy(buf + ls->len, rs->data, (size_t)rs->len);
+                buf[n] = '\0';
+                FelVal *v = fel_str_new(buf, n);
+                free(buf);
+                return v;
+            }
+            case 6: /* == */
+                return fel_val_bool(ls->len == rs->len &&
+                                    memcmp(ls->data, rs->data, (size_t)ls->len) == 0);
+            case 7: /* != */
+                return fel_val_bool(!(ls->len == rs->len &&
+                                      memcmp(ls->data, rs->data, (size_t)ls->len) == 0));
+        }
+        return fel_val_null();
+    }
     /* Integer arithmetic (both int) */
     if (left->tag == FEL_INT && right->tag == FEL_INT) {
         int64_t l = left->payload, r = right->payload;
