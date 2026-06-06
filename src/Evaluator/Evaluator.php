@@ -5,13 +5,14 @@ namespace Fel\Evaluator;
 use Fel\Ast\Node;
 use Fel\Ast\Node\{
     Program, ExpressionStatement, LetStatement, AssignStatement,
-    ReturnStatement, BlockStatement,
+    ReturnStatement, BlockStatement, BreakStatement, ContinueStatement,
     IntegerLiteral, FloatLiteral, StringLiteral, BooleanLiteral, NullLiteral,
     Identifier, PrefixExpression, InfixExpression,
     IfExpression, WhileExpression, ForInExpression,
     FunctionLiteral, CallExpression,
     ArrayLiteral, IndexExpression, HashLiteral,
     ImportStatement,
+    TryExpression, ThrowStatement, MatchExpression,
 };
 use Fel\Evaluator\Call\FunctionApplier;
 use Fel\Evaluator\Operator\{InfixOperations, PrefixOperations};
@@ -21,6 +22,7 @@ use Fel\Object\Type\{
     IntegerObject, FloatObject, StringObject, BooleanObject, NullObject,
     ReturnValue, ErrorObject, FunctionObject, BuiltinObject,
     ArrayObject, HashObject, HashPair, GeneratorObject,
+    BreakValue, ContinueValue,
 };
 
 class Evaluator {
@@ -41,6 +43,8 @@ class Evaluator {
             $node instanceof LetStatement        => $this->evalLetStatement($node, $env),
             $node instanceof AssignStatement     => $this->evalAssignStatement($node, $env),
             $node instanceof ReturnStatement     => $this->evalReturnStatement($node, $env),
+            $node instanceof BreakStatement      => new BreakValue(),
+            $node instanceof ContinueStatement   => new ContinueValue(),
             $node instanceof IntegerLiteral      => new IntegerObject($node->value),
             $node instanceof FloatLiteral        => new FloatObject($node->value),
             $node instanceof StringLiteral       => new StringObject($node->value),
@@ -58,6 +62,9 @@ class Evaluator {
             $node instanceof IndexExpression     => $this->evalIndexExpression($node, $env),
             $node instanceof HashLiteral         => $this->evalHashLiteral($node, $env),
             $node instanceof ImportStatement     => $this->evalImportStatement($node, $env),
+            $node instanceof ThrowStatement      => $this->evalThrowStatement($node, $env),
+            $node instanceof TryExpression       => $this->evalTryExpression($node, $env),
+            $node instanceof MatchExpression     => $this->evalMatchExpression($node, $env),
             default => $this->values->null(),
         };
     }
@@ -76,7 +83,8 @@ class Evaluator {
         $result = $this->values->null();
         foreach ($block->statements as $stmt) {
             $result = $this->eval($stmt, $env);
-            if ($result instanceof ReturnValue || $result instanceof ErrorObject) {
+            if ($result instanceof ReturnValue || $result instanceof ErrorObject
+                || $result instanceof BreakValue || $result instanceof ContinueValue) {
                 return $result;
             }
         }
@@ -146,8 +154,11 @@ class Evaluator {
             $cond = $this->eval($node->condition, $env);
             if ($cond instanceof ErrorObject) return $cond;
             if (!$this->values->isTruthy($cond)) break;
-            $result = $this->eval($node->body, $env);
-            if ($result instanceof ErrorObject || $result instanceof ReturnValue) return $result;
+            $body = $this->eval($node->body, $env);
+            if ($body instanceof ErrorObject || $body instanceof ReturnValue) return $body;
+            if ($body instanceof BreakValue)    break;
+            if ($body instanceof ContinueValue) continue;
+            $result = $body;
         }
         return $result;
     }
@@ -171,8 +182,11 @@ class Evaluator {
         foreach ($items as $element) {
             $loopEnv = Environment::enclosed($env);
             $loopEnv->set($node->variable->value, $element);
-            $result = $this->eval($node->body, $loopEnv);
-            if ($result instanceof ErrorObject || $result instanceof ReturnValue) return $result;
+            $body = $this->eval($node->body, $loopEnv);
+            if ($body instanceof ErrorObject || $body instanceof ReturnValue) return $body;
+            if ($body instanceof BreakValue)    break;
+            if ($body instanceof ContinueValue) continue;
+            $result = $body;
         }
         return $result;
     }
@@ -252,6 +266,41 @@ class Evaluator {
             $pairs[$key->hashKey()] = new HashPair($key, $value);
         }
         return new HashObject($pairs);
+    }
+
+    private function evalThrowStatement(ThrowStatement $node, Environment $env): FelObject {
+        $val = $this->eval($node->value, $env);
+        if ($val instanceof ErrorObject) return $val;
+        $message = $val instanceof StringObject ? $val->value : $val->inspect();
+        return new ErrorObject($message);
+    }
+
+    private function evalTryExpression(TryExpression $node, Environment $env): FelObject {
+        $result = $this->eval($node->body, Environment::enclosed($env));
+        if (!$result instanceof ErrorObject) {
+            return $result;
+        }
+        $catchEnv = Environment::enclosed($env);
+        $catchEnv->set($node->catchVar->value, new StringObject($result->message));
+        return $this->eval($node->catchBody, $catchEnv);
+    }
+
+    private function evalMatchExpression(MatchExpression $node, Environment $env): FelObject {
+        $subject = $this->eval($node->subject, $env);
+        if ($subject instanceof ErrorObject) return $subject;
+
+        foreach ($node->arms as $arm) {
+            if ($arm['pattern'] === null) {
+                return $this->eval($arm['result'], $env);   // wildcard
+            }
+            $pattern = $this->eval($arm['pattern'], $env);
+            if ($pattern instanceof ErrorObject) return $pattern;
+            $eq = $this->infix->evaluate('==', $subject, $pattern);
+            if ($this->values->isTruthy($eq)) {
+                return $this->eval($arm['result'], $env);
+            }
+        }
+        return $this->values->null();
     }
 
     private function evalImportStatement(ImportStatement $node, Environment $env): FelObject {

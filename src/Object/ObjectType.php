@@ -15,4 +15,9 @@ enum ObjectType: string {
     case ARRAY    = 'ARRAY';
     case HASH     = 'HASH';
     case GENERATOR = 'GENERATOR';
+    case BREAK    = 'BREAK';
+    case CONTINUE = 'CONTINUE';
+    case STRUCT_TYPE = 'STRUCT_TYPE';
+    case STRUCT   = 'STRUCT';
+    case INTERFACE = 'INTERFACE';
 }

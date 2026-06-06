@@ -23,9 +23,11 @@ class Lexer {
 
         $tok = match($this->ch) {
             '"'  => new Token(TokenType::STRING, $this->readString(), $line, $col),
-            '='  => $this->peekChar() === '='
-                        ? $this->twoCharToken(TokenType::EQ, $line, $col)
-                        : new Token(TokenType::ASSIGN, '=', $line, $col),
+            '='  => match($this->peekChar()) {
+                        '='     => $this->twoCharToken(TokenType::EQ, $line, $col),
+                        '>'     => $this->twoCharToken(TokenType::FAT_ARROW, $line, $col),
+                        default => new Token(TokenType::ASSIGN, '=', $line, $col),
+                    },
             '!'  => $this->peekChar() === '='
                         ? $this->twoCharToken(TokenType::NOT_EQ, $line, $col)
                         : new Token(TokenType::BANG, '!', $line, $col),
@@ -45,17 +47,27 @@ class Lexer {
             '('  => new Token(TokenType::LPAREN,    '(', $line, $col),
             ')'  => new Token(TokenType::RPAREN,    ')', $line, $col),
             ','  => new Token(TokenType::COMMA,      ',', $line, $col),
-            '+'  => new Token(TokenType::PLUS,       '+', $line, $col),
+            '+'  => $this->peekChar() === '='
+                        ? $this->twoCharToken(TokenType::PLUS_ASSIGN, $line, $col)
+                        : new Token(TokenType::PLUS, '+', $line, $col),
             '{'  => new Token(TokenType::LBRACE,     '{', $line, $col),
             '}'  => new Token(TokenType::RBRACE,     '}', $line, $col),
-            '-'  => new Token(TokenType::MINUS,      '-', $line, $col),
+            '-'  => $this->peekChar() === '='
+                        ? $this->twoCharToken(TokenType::MINUS_ASSIGN, $line, $col)
+                        : new Token(TokenType::MINUS, '-', $line, $col),
             '['  => new Token(TokenType::LBRACKET,   '[', $line, $col),
             ']'  => new Token(TokenType::RBRACKET,   ']', $line, $col),
             ':'  => new Token(TokenType::COLON,      ':', $line, $col),
             '.'  => new Token(TokenType::DOT,        '.', $line, $col),
-            '*'  => new Token(TokenType::ASTERISK,   '*', $line, $col),
-            '/'  => new Token(TokenType::SLASH,      '/', $line, $col),
-            '%'  => new Token(TokenType::PERCENT,    '%', $line, $col),
+            '*'  => $this->peekChar() === '='
+                        ? $this->twoCharToken(TokenType::ASTERISK_ASSIGN, $line, $col)
+                        : new Token(TokenType::ASTERISK, '*', $line, $col),
+            '/'  => $this->peekChar() === '='
+                        ? $this->twoCharToken(TokenType::SLASH_ASSIGN, $line, $col)
+                        : new Token(TokenType::SLASH, '/', $line, $col),
+            '%'  => $this->peekChar() === '='
+                        ? $this->twoCharToken(TokenType::PERCENT_ASSIGN, $line, $col)
+                        : new Token(TokenType::PERCENT, '%', $line, $col),
             ''   => new Token(TokenType::EOF,        '',  $line, $col),
             default => $this->readIdentifierOrNumber($line, $col),
         };
@@ -66,12 +78,16 @@ class Lexer {
         if (!in_array($tok->type, [
             TokenType::IDENT, TokenType::INT, TokenType::FLOAT, TokenType::STRING,
             TokenType::EQ, TokenType::NOT_EQ, TokenType::LT_EQ, TokenType::GT_EQ,
-            TokenType::AND, TokenType::OR,
+            TokenType::AND, TokenType::OR, TokenType::FAT_ARROW,
+            TokenType::PLUS_ASSIGN, TokenType::MINUS_ASSIGN, TokenType::ASTERISK_ASSIGN,
+            TokenType::SLASH_ASSIGN, TokenType::PERCENT_ASSIGN,
             // keyword tokens come from readIdentifier() and are already past their last char
             TokenType::FUNCTION, TokenType::LET, TokenType::TRUE, TokenType::FALSE,
             TokenType::IF, TokenType::ELSE, TokenType::RETURN, TokenType::WHILE,
             TokenType::FOR, TokenType::IN, TokenType::BREAK, TokenType::CONTINUE,
             TokenType::IMPORT, TokenType::NULL,
+            TokenType::TRY, TokenType::CATCH, TokenType::THROW, TokenType::MATCH,
+            TokenType::STRUCT, TokenType::INTERFACE, TokenType::YIELD,
         ])) {
             $this->readChar();
         }

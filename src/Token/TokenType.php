@@ -24,6 +24,14 @@ enum TokenType: string {
     case GT_EQ    = '>=';
     case AND      = '&&';
     case OR       = '||';
+    // compound assignment
+    case PLUS_ASSIGN     = '+=';
+    case MINUS_ASSIGN    = '-=';
+    case ASTERISK_ASSIGN = '*=';
+    case SLASH_ASSIGN    = '/=';
+    case PERCENT_ASSIGN  = '%=';
+    // fat arrow (match arms)
+    case FAT_ARROW = '=>';
     // delimiters
     case COMMA     = ',';
     case SEMICOLON = ';';
@@ -50,6 +58,13 @@ enum TokenType: string {
     case CONTINUE = 'CONTINUE';
     case IMPORT   = 'IMPORT';
     case NULL     = 'NULL';
+    case TRY      = 'TRY';
+    case CATCH    = 'CATCH';
+    case THROW    = 'THROW';
+    case MATCH    = 'MATCH';
+    case STRUCT   = 'STRUCT';
+    case INTERFACE = 'INTERFACE';
+    case YIELD    = 'YIELD';
     // equality
     case EQ     = '==';
     case NOT_EQ = '!=';

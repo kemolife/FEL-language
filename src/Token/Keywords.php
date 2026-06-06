@@ -18,6 +18,13 @@ final class Keywords {
         'continue' => TokenType::CONTINUE,
         'import'   => TokenType::IMPORT,
         'null'     => TokenType::NULL,
+        'try'      => TokenType::TRY,
+        'catch'    => TokenType::CATCH,
+        'throw'    => TokenType::THROW,
+        'match'    => TokenType::MATCH,
+        'struct'   => TokenType::STRUCT,
+        'interface' => TokenType::INTERFACE,
+        'yield'    => TokenType::YIELD,
     ];
 
     public static function lookup(string $ident): TokenType {

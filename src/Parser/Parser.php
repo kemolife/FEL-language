@@ -4,13 +4,14 @@ namespace Fel\Parser;
 
 use Fel\Ast\Node\{
     Program, LetStatement, AssignStatement, ReturnStatement,
-    ExpressionStatement, BlockStatement,
+    ExpressionStatement, BlockStatement, BreakStatement, ContinueStatement,
     Identifier, IntegerLiteral, FloatLiteral, StringLiteral, BooleanLiteral, NullLiteral,
     PrefixExpression, InfixExpression,
     IfExpression, WhileExpression, ForInExpression,
     FunctionLiteral, CallExpression,
     ArrayLiteral, IndexExpression, HashLiteral,
     ImportStatement,
+    TryExpression, ThrowStatement, MatchExpression,
 };
 use Fel\Ast\{Expression, Statement};
 use Fel\Token\{Token, TokenType};
@@ -48,6 +49,8 @@ final class Parser {
         $this->prefixFns[TokenType::FUNCTION->value] = fn() => $this->parseFunctionLiteral();
         $this->prefixFns[TokenType::LBRACKET->value] = fn() => $this->parseArrayLiteral();
         $this->prefixFns[TokenType::LBRACE->value]   = fn() => $this->parseHashLiteral();
+        $this->prefixFns[TokenType::TRY->value]      = fn() => $this->parseTryExpression();
+        $this->prefixFns[TokenType::MATCH->value]    = fn() => $this->parseMatchExpression();
     }
 
     private function registerInfixes(): void {
@@ -82,10 +85,13 @@ final class Parser {
 
     private function parseStatement(): ?Statement {
         return match($this->stream->cur()->type) {
-            TokenType::LET    => $this->parseLetStatement(),
-            TokenType::RETURN => $this->parseReturnStatement(),
-            TokenType::IMPORT => $this->parseImportStatement(),
-            default           => $this->parseExpressionStatementOrAssign(),
+            TokenType::LET      => $this->parseLetStatement(),
+            TokenType::RETURN   => $this->parseReturnStatement(),
+            TokenType::IMPORT   => $this->parseImportStatement(),
+            TokenType::BREAK    => $this->parseBreakStatement(),
+            TokenType::CONTINUE => $this->parseContinueStatement(),
+            TokenType::THROW    => $this->parseThrowStatement(),
+            default             => $this->parseExpressionStatementOrAssign(),
         };
     }
 
@@ -108,10 +114,85 @@ final class Parser {
         return new ReturnStatement($tok, $value);
     }
 
+    private function parseBreakStatement(): BreakStatement {
+        $tok = $this->stream->cur();
+        if ($this->stream->peekIs(TokenType::SEMICOLON)) $this->stream->next();
+        return new BreakStatement($tok);
+    }
+
+    private function parseContinueStatement(): ContinueStatement {
+        $tok = $this->stream->cur();
+        if ($this->stream->peekIs(TokenType::SEMICOLON)) $this->stream->next();
+        return new ContinueStatement($tok);
+    }
+
+    private const COMPOUND_OPS = [
+        'PLUS_ASSIGN'     => '+',
+        'MINUS_ASSIGN'    => '-',
+        'ASTERISK_ASSIGN' => '*',
+        'SLASH_ASSIGN'    => '/',
+        'PERCENT_ASSIGN'  => '%',
+    ];
+
+    private function parseThrowStatement(): ?ThrowStatement {
+        $tok = $this->stream->cur();
+        $this->stream->next();
+        $value = $this->parseExpression(Precedence::LOWEST);
+        if ($value === null) return null;
+        if ($this->stream->peekIs(TokenType::SEMICOLON)) $this->stream->next();
+        return new ThrowStatement($tok, $value);
+    }
+
+    private function parseTryExpression(): ?TryExpression {
+        $tok = $this->stream->cur();
+        if (!$this->expectPeek(TokenType::LBRACE)) return null;
+        $body = $this->parseBlockStatement();
+        if (!$this->expectPeek(TokenType::CATCH)) return null;
+        if (!$this->expectPeek(TokenType::LPAREN)) return null;
+        if (!$this->expectPeek(TokenType::IDENT)) return null;
+        $catchVar = new Identifier($this->stream->cur(), $this->stream->cur()->literal);
+        if (!$this->expectPeek(TokenType::RPAREN)) return null;
+        if (!$this->expectPeek(TokenType::LBRACE)) return null;
+        $catchBody = $this->parseBlockStatement();
+        return new TryExpression($tok, $body, $catchVar, $catchBody);
+    }
+
+    private function parseMatchExpression(): ?MatchExpression {
+        $tok = $this->stream->cur();
+        if (!$this->expectPeek(TokenType::LPAREN)) return null;
+        $this->stream->next();
+        $subject = $this->parseExpression(Precedence::LOWEST);
+        if (!$this->expectPeek(TokenType::RPAREN)) return null;
+        if (!$this->expectPeek(TokenType::LBRACE)) return null;
+
+        $arms = [];
+        while (!$this->stream->peekIs(TokenType::RBRACE)) {
+            $this->stream->next();
+            // wildcard `_` or a pattern expression
+            if ($this->stream->curIs(TokenType::IDENT) && $this->stream->cur()->literal === '_') {
+                $pattern = null;
+            } else {
+                $pattern = $this->parseExpression(Precedence::LOWEST);
+            }
+            if (!$this->expectPeek(TokenType::FAT_ARROW)) return null;
+            $this->stream->next();
+            $result = $this->parseExpression(Precedence::LOWEST);
+            $arms[] = ['pattern' => $pattern, 'result' => $result];
+            if (!$this->stream->peekIs(TokenType::RBRACE) && !$this->expectPeek(TokenType::COMMA)) return null;
+        }
+        if (!$this->expectPeek(TokenType::RBRACE)) return null;
+        return new MatchExpression($tok, $subject, $arms);
+    }
+
     private function parseExpressionStatementOrAssign(): ?Statement {
         // check for bare assignment: IDENT = expr (no let)
         if ($this->stream->cur()->type === TokenType::IDENT && $this->stream->peekIs(TokenType::ASSIGN)) {
             return $this->parseAssignStatement();
+        }
+        // compound assignment: IDENT op= expr  -->  IDENT = IDENT op expr
+        if ($this->stream->cur()->type === TokenType::IDENT
+            && isset(self::COMPOUND_OPS[$this->stream->peek()->type->name])) {
+            return $this->parseCompoundAssignStatement();
         }
         $tok  = $this->stream->cur();
         $expr = $this->parseExpression(Precedence::LOWEST);
@@ -127,6 +208,19 @@ final class Parser {
         $value = $this->parseExpression(Precedence::LOWEST);
         if ($this->stream->peekIs(TokenType::SEMICOLON)) $this->stream->next();
         return new AssignStatement($tok, $name, $value);
+    }
+
+    private function parseCompoundAssignStatement(): ?AssignStatement {
+        $tok  = $this->stream->cur();
+        $name = new Identifier($tok, $tok->literal);
+        $this->stream->next();                       // consume IDENT
+        $op   = self::COMPOUND_OPS[$this->stream->cur()->type->name];
+        $opTok = $this->stream->cur();
+        $this->stream->next();                       // consume op=
+        $rhs  = $this->parseExpression(Precedence::LOWEST);
+        if ($this->stream->peekIs(TokenType::SEMICOLON)) $this->stream->next();
+        $combined = new InfixExpression($opTok, $name, $op, $rhs);
+        return new AssignStatement($tok, $name, $combined);
     }
 
     private function parseExpression(int $priority): ?Expression {
@@ -208,8 +302,18 @@ final class Parser {
         $alternative = null;
         if ($this->stream->peekIs(TokenType::ELSE)) {
             $this->stream->next();
-            if (!$this->expectPeek(TokenType::LBRACE)) return null;
-            $alternative = $this->parseBlockStatement();
+            if ($this->stream->peekIs(TokenType::IF)) {
+                // `else if` — desugar to nested if-expression wrapped in a block
+                $this->stream->next();
+                $nested = $this->parseIfExpression();
+                if ($nested === null) return null;
+                $alternative = new BlockStatement($nested->token, [
+                    new ExpressionStatement($nested->token, $nested),
+                ]);
+            } else {
+                if (!$this->expectPeek(TokenType::LBRACE)) return null;
+                $alternative = $this->parseBlockStatement();
+            }
         }
         return new IfExpression($tok, $condition, $consequence, $alternative);
     }
