@@ -14,6 +14,7 @@ use Fel\Ast\Node\{
     ImportStatement,
     TryExpression, ThrowStatement, MatchExpression,
     StructDefinition, InterfaceDefinition, MethodDefinition, StructLiteral,
+    YieldExpression,
 };
 use Fel\Evaluator\Call\FunctionApplier;
 use Fel\Evaluator\Operator\{InfixOperations, PrefixOperations};
@@ -71,6 +72,7 @@ class Evaluator {
             $node instanceof InterfaceDefinition => $this->evalInterfaceDefinition($node, $env),
             $node instanceof MethodDefinition    => $this->evalMethodDefinition($node, $env),
             $node instanceof StructLiteral       => $this->evalStructLiteral($node, $env),
+            $node instanceof YieldExpression     => $this->evalYieldExpression($node, $env),
             default => $this->values->null(),
         };
     }
@@ -209,7 +211,38 @@ class Evaluator {
             },
             bodySrc: $bodySrc,
             env:     $env,
+            isGenerator: self::containsYield($body),
         );
+    }
+
+    private function evalYieldExpression(YieldExpression $node, Environment $env): FelObject {
+        $val = $this->eval($node->value, $env);
+        if ($val instanceof ErrorObject) return $val;
+        if (\Fiber::getCurrent() === null) {
+            return new ErrorObject("yield outside of a generator function");
+        }
+        $sent = \Fiber::suspend($val);
+        return $sent instanceof FelObject ? $sent : $this->values->null();
+    }
+
+    /** True if the subtree contains a `yield`, not descending into nested function scopes. */
+    private static function containsYield(Node $node): bool {
+        if ($node instanceof YieldExpression) return true;
+        if ($node instanceof FunctionLiteral || $node instanceof MethodDefinition) return false;
+        foreach (get_object_vars($node) as $value) {
+            if ($value instanceof Node && self::containsYield($value)) return true;
+            if (is_array($value)) {
+                foreach ($value as $item) {
+                    if ($item instanceof Node && self::containsYield($item)) return true;
+                    if (is_array($item)) {
+                        foreach ($item as $sub) {
+                            if ($sub instanceof Node && self::containsYield($sub)) return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private function evalCallExpression(CallExpression $node, Environment $env): FelObject {

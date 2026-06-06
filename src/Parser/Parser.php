@@ -13,6 +13,7 @@ use Fel\Ast\Node\{
     ImportStatement,
     TryExpression, ThrowStatement, MatchExpression,
     StructDefinition, InterfaceDefinition, MethodDefinition, StructLiteral,
+    YieldExpression,
 };
 use Fel\Ast\{Expression, Statement};
 use Fel\Token\{Token, TokenType};
@@ -52,6 +53,7 @@ final class Parser {
         $this->prefixFns[TokenType::LBRACE->value]   = fn() => $this->parseHashLiteral();
         $this->prefixFns[TokenType::TRY->value]      = fn() => $this->parseTryExpression();
         $this->prefixFns[TokenType::MATCH->value]    = fn() => $this->parseMatchExpression();
+        $this->prefixFns[TokenType::YIELD->value]    = fn() => $this->parseYieldExpression();
     }
 
     private function registerInfixes(): void {
@@ -222,6 +224,14 @@ final class Parser {
         if ($value === null) return null;
         if ($this->stream->peekIs(TokenType::SEMICOLON)) $this->stream->next();
         return new ThrowStatement($tok, $value);
+    }
+
+    private function parseYieldExpression(): ?YieldExpression {
+        $tok = $this->stream->cur();
+        $this->stream->next();
+        $value = $this->parseExpression(Precedence::LOWEST);
+        if ($value === null) return null;
+        return new YieldExpression($tok, $value);
     }
 
     private function parseTryExpression(): ?TryExpression {

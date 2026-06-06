@@ -11,6 +11,7 @@ final class FunctionObject implements FelObject {
         public readonly \Closure    $body,
         public readonly string      $bodySrc,
         public readonly Environment $env,
+        public readonly bool        $isGenerator = false,
     ) {}
     public function type(): ObjectType { return ObjectType::FUNCTION; }
     public function inspect(): string {
