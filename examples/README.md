@@ -22,6 +22,11 @@ php bin/fel examples/<script>.fel
 | `08_math.fel` | `stdlib/math`: `sqrt`, `pow`, `pi`, circle area, Pythagorean theorem | `php bin/fel examples/08_math.fel` |
 | `09_packages.fel` | The `date` package: `now`, `today`, `format`, `add` | `php bin/fel examples/09_packages.fel` |
 | `10_json.fel` | `stdlib/json`: decode a JSON string, read fields, re-encode | `php bin/fel examples/10_json.fel` |
+| `11_generators.fel` | Lazy builtins: `lazy_range`, `count_from`, `take`, `to_array` | `php bin/fel examples/11_generators.fel` |
+| `12_http.fel` | The `http` package: `get` / `post` | `php bin/fel examples/12_http.fel` |
+| `13_structs.fel` | Go-style structs, receiver methods, method chaining, interfaces + `implements` | `php bin/fel examples/13_structs.fel` |
+| `14_control_flow.fel` | `break`/`continue`, `else if`, `match` + `_` wildcard, compound assignment | `php bin/fel examples/14_control_flow.fel` |
+| `15_generators_errors.fel` | User `yield` generators and `try`/`catch`/`throw` error handling | `php bin/fel examples/15_generators_errors.fel` |
 
 ## Notes
 

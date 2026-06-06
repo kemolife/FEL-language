@@ -1,0 +1,15 @@
+// Go-style structs, methods, and interfaces
+
+struct Point { x, y }
+
+fn (p Point) dist() { sqrt(p.x * p.x + p.y * p.y) }
+fn (p Point) scale(k) { Point{x: p.x * k, y: p.y * k} }
+
+let p = Point{x: 3, y: 4};
+display("p.x = " + to_str(p.x));
+display("dist = " + to_str(p.dist()));
+display("scaled.y = " + to_str(p.scale(2).y));
+
+// interfaces are structural — a struct satisfies one if it has the methods
+interface Shape { dist }
+display(implements(p, Shape));   // true

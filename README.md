@@ -56,10 +56,18 @@ Syntax tour lives in the example scripts — see the table above and
 `examples/README.md`. Language rules in brief:
 
 - `//` comments; statements end with `;` (last expression in a block is its return value).
-- `let x = ...;` declares, `x = ...;` reassigns. Functions: `fn(a, b) { ... }`.
-- `if`/`else`, `while`, `for (x in ...)`.
+- `let x = ...;` declares, `x = ...;` reassigns. Compound assignment: `x += 1`, `-=`, `*=`, `/=`, `%=`.
+  Functions: `fn(a, b) { ... }`. Optional Go-style type hints: `fn(a: Int): Int { ... }` (parsed, dynamic at runtime).
+- `if`/`else`/`else if`, `while`, `for (x in ...)` with `break` and `continue`.
+- `match (x) { 1 => "one", _ => "other" }` — value matching with a `_` wildcard.
+- Errors: `throw "msg"` raises; `try { ... } catch (e) { ... }` recovers (catches thrown and runtime errors).
+- Generators: a function using `yield` becomes a lazy generator; drive it with `for-in`, `take`, `to_array`.
 - Arrays `[1, 2, 3]`, hashes `{"k": v}`. Read with `arr[i]`, `hash["k"]`, or `hash.k`.
   Hashes are immutable in place — build a new hash literal instead.
+- Structs (Go-style, no classes/inheritance):
+  - `struct Point { x, y }` then `Point{x: 1, y: 2}`; access fields with `p.x`.
+  - Methods via receiver: `fn (p Point) dist() { sqrt(p.x*p.x + p.y*p.y) }`, called `p.dist()`.
+  - Interfaces: `interface Shape { area }`; check with `implements(value, Shape)` (structural).
 - `import "stdlib/<name>"` binds a module (e.g. `import "stdlib/math"` exposes `math.sqrt`).
   Stdlib modules: `math`, `string`, `array`, `json`, `io`, `types`.
 
@@ -244,15 +252,18 @@ clang -O2 examples/compile_demo.ll src/Compiler/Runtime/fel_runtime.c -o compile
 The native binary needs no PHP at runtime — it's machine code. A mark-and-sweep
 GC (in `fel_runtime.c`) reclaims memory; CodeGen emits GC roots at every scope.
 
-**Compiler covers a numeric subset.** What works natively today:
+**What works natively today:**
 - integer / float arithmetic, variables, reassignment
 - `if`/`else`, `while`
-- arrays of numbers, `display` of numbers
+- string literals, string concatenation, and string `==`/`!=`
+- arrays of numbers, `display`
+- top-level user functions and **recursion** (e.g. factorial, fibonacci) —
+  with transient GC rooting so collections mid-expression are safe
 
 What is interpreter-only (NOT yet in the native backend):
-- string concatenation and string builtins
+- closures, higher-order functions, passing functions as values
 - generic builtins (`to_str`, `len`, `push`, math fns, ...) — only `display` is wired
-- index expressions, hashes, user-defined function calls, generators
+- index expressions, hashes, structs, generators, match, try/catch
 
 Run `examples/compile_demo.fel` for a program that compiles and runs natively.
 Anything richer — use the interpreter (`php bin/fel script.fel`). The native

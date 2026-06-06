@@ -1,0 +1,29 @@
+// User-defined generators (yield) and error handling (try/catch/throw)
+
+// a generator function: yields values lazily
+let naturals = fn() {
+    let i = 0;
+    while (true) {
+        yield i;
+        i += 1;
+    }
+};
+display(to_array(take(naturals(), 5)));   // [0, 1, 2, 3, 4]
+
+let squares = fn(n) {
+    let i = 1;
+    while (i <= n) {
+        yield i * i;
+        i += 1;
+    }
+};
+display(to_array(squares(4)));            // [1, 4, 9, 16]
+
+// error handling
+let safe_div = fn(a, b) {
+    if (b == 0) { throw "division by zero"; }
+    a / b
+};
+
+display(try { safe_div(10, 2) } catch (e) { -1 });   // 5
+display(try { safe_div(10, 0) } catch (e) { e });     // "division by zero"

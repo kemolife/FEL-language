@@ -1,0 +1,29 @@
+// break / continue, else-if, match, compound assignment
+
+let total = 0;
+for (n in range(1, 20)) {
+    if (n % 2 == 0) { continue; }   // skip evens
+    if (n > 10)     { break; }      // stop past 10
+    total += n;                     // compound assignment
+}
+display("sum of odds 1..10 = " + to_str(total));   // 1+3+5+7+9 = 25
+
+let classify = fn(n) {
+    if (n < 0) { "negative" }
+    else if (n == 0) { "zero" }
+    else { "positive" }
+};
+display(classify(-3));
+display(classify(0));
+display(classify(7));
+
+// match with wildcard
+let name_of = fn(code) {
+    match (code) {
+        1 => "one",
+        2 => "two",
+        _ => "many"
+    }
+};
+display(name_of(2));
+display(name_of(99));
