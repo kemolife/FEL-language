@@ -1,0 +1,20 @@
+{
+  "map":     fn(arr, f) { map(arr, f) },
+  "filter":  fn(arr, f) { filter(arr, f) },
+  "reduce":  fn(arr, f, init) { reduce(arr, f, init) },
+  "sort":    fn(arr) { sort(arr) },
+  "sort_by": fn(arr, f) { sort_by(arr, f) },
+  "reverse": fn(arr) { reverse(arr) },
+  "flatten": fn(arr) { flatten(arr) },
+  "unique":  fn(arr) { unique(arr) },
+  "zip":     fn(a, b) { zip(a, b) },
+  "slice":   fn(arr, start, length) { slice(arr, start, length) },
+  "concat":  fn(a, b) { concat(a, b) },
+  "every":   fn(arr, f) { every(arr, f) },
+  "some":    fn(arr, f) { some(arr, f) },
+  "find":    fn(arr, f) { find(arr, f) },
+  "range":   fn(start, stop) { range(start, stop) },
+  "count":   fn(arr) { len(arr) },
+  "head":    fn(arr) { first(arr) },
+  "tail":    fn(arr) { rest(arr) }
+}

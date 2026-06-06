@@ -1,0 +1,29 @@
+// 05_strings.fel — String operations
+// Run: php bin/fel examples/05_strings.fel
+
+// Built-in string helpers (no import needed):
+let phrase = "  The quick brown fox  ";
+display("Original:  '" + phrase + "'");
+display("trim:      '" + trim(phrase) + "'");
+display("upper:     " + upper(phrase));
+display("lower:     " + lower(phrase));
+
+// split turns a string into an array; join turns an array back into a string.
+let words = split(trim(phrase), " ");
+display("split:     " + to_str(words));
+display("word count: " + to_str(len(words)));
+display("join (-):  " + join(words, "-"));
+
+// contains checks for a substring.
+display("contains 'fox'?  " + to_str(contains(phrase, "fox")));
+display("contains 'cat'?  " + to_str(contains(phrase, "cat")));
+
+// The stdlib/string module adds more helpers like replace, starts_with, repeat.
+import "stdlib/string"
+
+display("");
+display("--- stdlib/string ---");
+display("replace:     " + string.replace("hello world", "world", "FEL"));
+display("repeat:      " + string.repeat("=", 10));
+display("starts_with: " + to_str(string.starts_with("foobar", "foo")));
+display("ends_with:   " + to_str(string.ends_with("foobar", "bar")));

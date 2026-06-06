@@ -1,0 +1,31 @@
+// Lazy generators — values computed on demand, no upfront allocation.
+
+// lazy_range works like range but is lazy (nothing materialized until iterated)
+display("lazy_range(0, 5):");
+for (n in lazy_range(0, 5)) {
+  display(n);
+}
+
+// Generators are re-iterable — the factory runs fresh each loop
+let r = lazy_range(0, 3);
+display("first pass:");
+for (x in r) { display(x); }
+display("second pass (same generator):");
+for (x in r) { display(x); }
+
+// count_from is an INFINITE generator — never materialize it directly.
+// Use take(seq, n) to pull a bounded prefix.
+display("first 10 counting from 1:");
+display(take(count_from(1), 10));
+
+// count_from with a step → infinite even numbers
+display("first 5 even numbers:");
+display(take(count_from(0, 2), 5));
+
+// take also works on plain arrays
+display("take 3 of an array:");
+display(take([10, 20, 30, 40, 50], 3));
+
+// to_array materializes a FINITE generator (would hang on count_from)
+display("lazy_range materialized:");
+display(to_array(lazy_range(100, 105)));

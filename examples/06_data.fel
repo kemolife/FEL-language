@@ -1,0 +1,39 @@
+// 06_data.fel — Hashes and arrays, nested data
+// Run: php bin/fel examples/06_data.fel
+
+// A hash maps string keys to values. Build a small "database" of users.
+let users = {
+  "alice": {"age": 30, "city": "Berlin"},
+  "bob":   {"age": 25, "city": "Lisbon"},
+  "carol": {"age": 35, "city": "Berlin"}
+};
+
+// Iterate over the keys of a hash, then look up each value.
+display("--- Users ---");
+for (name in keys(users)) {
+  let u = users[name];
+  // Dot access (u.age) is sugar for u["age"].
+  display(upper(name) + ": age " + to_str(u.age) + ", " + u["city"]);
+}
+
+// Arrays of records.
+let scores = [
+  {"name": "Alice", "score": 88},
+  {"name": "Bob",   "score": 72},
+  {"name": "Carol", "score": 95}
+];
+
+display("");
+display("--- Scores sorted (high to low) ---");
+// sort_by sorts ascending by the key the function returns; reverse for descending.
+let ranked = reverse(sort_by(scores, fn(r) { r.score }));
+for (r in ranked) {
+  display(r.name + ": " + to_str(r.score));
+}
+
+// Plain array operations.
+let cities = ["Berlin", "Lisbon", "Berlin", "Oslo", "Lisbon"];
+display("");
+display("All cities:    " + to_str(cities));
+display("Unique cities: " + to_str(unique(cities)));
+display("Sorted cities: " + to_str(sort(cities)));

@@ -1,0 +1,32 @@
+// 08_math.fel — The math stdlib module
+// Run: php bin/fel examples/08_math.fel
+
+// Import the math module. The bound name `math` is used to access its members.
+import "stdlib/math"
+
+display("pi = " + to_str(math.pi));
+display("e  = " + to_str(math.e));
+
+// Square root. Pass a float (e.g. 2.0) for clean floating-point results.
+display("sqrt(2)  = " + to_str(math.sqrt(2.0)));
+display("sqrt(144)= " + to_str(math.sqrt(144.0)));
+
+// Power: pow(base, exponent).
+display("2 ^ 10   = " + to_str(math.pow(2, 10)));
+
+// Area of a circle with radius 5: pi * r^2.
+let r = 5;
+let area = math.pi * math.pow(r, 2);
+display("Circle area (r=5) = " + to_str(area));
+
+// Pythagorean theorem: hypotenuse of a 3-4-5 right triangle.
+let leg_a = 3.0;
+let leg_b = 4.0;
+let hypotenuse = math.sqrt(math.pow(leg_a, 2) + math.pow(leg_b, 2));
+display("Hypotenuse of 3-4 triangle = " + to_str(hypotenuse));
+
+// Rounding helpers.
+display("floor(3.7) = " + to_str(math.floor(3.7)));
+display("ceil(3.2)  = " + to_str(math.ceil(3.2)));
+display("round(3.5) = " + to_str(math.round(3.5)));
+display("abs(-9)    = " + to_str(math.abs(-9)));

@@ -1,0 +1,44 @@
+{
+  "split": fn(s, sep) { split(s, sep) },
+  "join": fn(arr, sep) { join(arr, sep) },
+  "trim": fn(s) { trim(s) },
+  "upper": fn(s) { upper(s) },
+  "lower": fn(s) { lower(s) },
+  "contains": fn(s, needle) { contains(s, needle) },
+
+  "starts_with": fn(s, prefix) {
+    contains(s, prefix) && split(s, prefix)[0] == ""
+  },
+
+  "ends_with": fn(s, suffix) {
+    let parts = split(s, suffix);
+    parts[len(parts) - 1] == ""
+  },
+
+  "replace": fn(s, search, rep) {
+    join(split(s, search), rep)
+  },
+
+  "index_of": fn(s, needle) {
+    let parts = split(s, needle);
+    if (len(parts) < 2) {
+      -1
+    } else {
+      len(parts[0])
+    }
+  },
+
+  "repeat": fn(s, n) {
+    let result = "";
+    let i = 0;
+    while (i < n) {
+      result = result + s;
+      i = i + 1;
+    }
+    result
+  },
+
+  "substr":    fn(s, start, length) { substr(s, start, length) },
+  "pad_left":  fn(s, n, pad) { pad_left(s, n, pad) },
+  "pad_right": fn(s, n, pad) { pad_right(s, n, pad) }
+}

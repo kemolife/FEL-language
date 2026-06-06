@@ -1,0 +1,38 @@
+// 02_fibonacci.fel — Recursion and loops
+// Run: php bin/fel examples/02_fibonacci.fel
+
+// Recursive Fibonacci. A function captures the environment in which it is
+// defined, so `fib` can refer to itself for recursion.
+let fib = fn(n) {
+  if (n < 2) {
+    n
+  } else {
+    fib(n - 1) + fib(n - 2)
+  }
+};
+
+display("Recursive Fibonacci (first 10):");
+// range(0, 10) yields [0, 1, ..., 9] — the stop value is exclusive.
+for (i in range(0, 10)) {
+  display(to_str(i) + " -> " + to_str(fib(i)));
+}
+
+// Iterative Fibonacci using a while loop. Often faster for larger n.
+let fib_iter = fn(n) {
+  let a = 0;
+  let b = 1;
+  let i = 0;
+  while (i < n) {
+    let next = a + b;
+    a = b;
+    b = next;
+    i = i + 1;
+  }
+  a
+};
+
+display("");
+display("Iterative Fibonacci (first 10):");
+for (i in range(0, 10)) {
+  display(to_str(i) + " -> " + to_str(fib_iter(i)));
+}

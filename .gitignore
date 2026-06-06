@@ -1,0 +1,36 @@
+# Dependencies
+/vendor/
+
+# Composer
+composer.phar
+
+# PHPUnit
+/.phpunit.result.cache
+/.phpunit.cache/
+.phpunit.result.cache
+
+# Compiled artifacts
+/compile_demo
+*.o
+*.out
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+
+# Env
+.env
+.env.local
+*.log

@@ -1,0 +1,4 @@
+{
+  "encode": fn(val) { json_encode(val) },
+  "decode": fn(s) { json_decode(s) }
+}

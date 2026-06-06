@@ -1,0 +1,36 @@
+// 04_higher_order.fel — map / filter / reduce and functions as values
+// Run: php bin/fel examples/04_higher_order.fel
+
+let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+display("Numbers: " + to_str(numbers));
+
+// Functions are values: they can be stored in variables and passed as args.
+let double = fn(x) { x * 2 };
+let is_even = fn(x) { x % 2 == 0 };
+
+// map applies a function to every element, returning a new array.
+let doubled = map(numbers, double);
+display("Doubled: " + to_str(doubled));
+
+// You can also pass an anonymous function inline.
+let squared = map(numbers, fn(x) { x * x });
+display("Squared: " + to_str(squared));
+
+// filter keeps only elements for which the function returns true.
+let evens = filter(numbers, is_even);
+display("Evens:   " + to_str(evens));
+
+// reduce folds an array into a single value with an accumulator + start value.
+let sum = reduce(numbers, fn(acc, x) { acc + x }, 0);
+display("Sum:     " + to_str(sum));
+
+let product = reduce(numbers, fn(acc, x) { acc * x }, 1);
+display("Product: " + to_str(product));
+
+// Combine them: sum of the squares of the even numbers.
+let result = reduce(
+  map(filter(numbers, is_even), fn(x) { x * x }),
+  fn(acc, x) { acc + x },
+  0
+);
+display("Sum of squares of evens: " + to_str(result));

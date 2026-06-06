@@ -1,0 +1,5 @@
+{
+  "read_file":  fn(path) { read_file(path) },
+  "write_file": fn(path, content) { write_file(path, content) },
+  "readline":   fn() { readline() }
+}

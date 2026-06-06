@@ -1,0 +1,6 @@
+import "http"
+import "stdlib/json"
+
+let response = http.get("https://jsonplaceholder.typicode.com/todos/1");
+
+display(json.decode(response));

@@ -1,0 +1,23 @@
+// 09_packages.fel — Using the `date` package
+// Run: php bin/fel examples/09_packages.fel
+
+// Packages are imported by name. The `date` package provides time helpers.
+import "date"
+
+// date.now() returns the current Unix timestamp (seconds since 1970).
+let ts = date.now();
+display("Current timestamp: " + to_str(ts));
+
+// date.today() is a shortcut for today's date as "Y-m-d".
+display("Today: " + date.today());
+
+// date.format(timestamp, format) formats a timestamp using PHP-style codes:
+//   Y = 4-digit year, m = month, d = day, H = hour, i = minute, s = second.
+display("Formatted now:   " + date.format(ts, "Y-m-d H:i:s"));
+display("Just the date:   " + date.format(ts, "Y-m-d"));
+display("Just the time:   " + date.format(ts, "H:i:s"));
+
+// date.add(timestamp, seconds) returns a new timestamp shifted forward.
+let one_day = 86400;
+let tomorrow = date.add(ts, one_day);
+display("Tomorrow:        " + date.format(tomorrow, "Y-m-d"));

@@ -1,0 +1,36 @@
+// 10_json.fel — Encoding and decoding JSON
+// Run: php bin/fel examples/10_json.fel
+
+import "stdlib/json"
+
+// A JSON string. Inner quotes are escaped with \".
+let raw = "{\"name\": \"Alice\", \"age\": 30, \"languages\": [\"FEL\", \"PHP\"]}";
+display("Raw JSON:");
+display(raw);
+
+// json.decode parses a JSON string into FEL values (hashes and arrays).
+let data = json.decode(raw);
+display("");
+display("Decoded fields:");
+display("name:      " + data.name);
+display("age:       " + to_str(data.age));
+display("languages: " + to_str(data["languages"]));
+
+// Build an updated record from the decoded data, then re-encode to JSON.
+// (Hashes are constructed as literals; we copy fields and add new ones.)
+let updated = {
+  "name": data.name,
+  "age": data.age + 1,
+  "languages": data["languages"],
+  "active": true
+};
+
+display("");
+display("Re-encoded JSON:");
+display(json.encode(updated));
+
+// Encoding works for plain FEL values too.
+let report = {"total": 3, "items": ["a", "b", "c"]};
+display("");
+display("Encoded report:");
+display(json.encode(report));

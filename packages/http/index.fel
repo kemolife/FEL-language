@@ -1,0 +1,5 @@
+{
+  "get":  fn(url) { http_get(url) },
+  "post": fn(url, body) { http_post(url, body) },
+  "post_json": fn(url, body) { http_post(url, body) }
+}

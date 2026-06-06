@@ -1,0 +1,33 @@
+// 07_closures.fel — Closures and captured state
+// Run: php bin/fel examples/07_closures.fel
+
+// A closure is a function that "remembers" the variables from where it was
+// created. make_counter returns a function that increments its own private `c`.
+let make_counter = fn() {
+  let c = 0;
+  fn() {
+    c = c + 1;
+    c
+  }
+};
+
+let counter = make_counter();
+display("counter() -> " + to_str(counter()));  // 1
+display("counter() -> " + to_str(counter()));  // 2
+display("counter() -> " + to_str(counter()));  // 3
+
+// Each counter has its own independent state.
+let other = make_counter();
+display("other()   -> " + to_str(other()));    // 1 (independent)
+display("counter() -> " + to_str(counter()));  // 4 (continues its own count)
+
+// make_adder(n) returns a function that adds n to its argument.
+let make_adder = fn(n) {
+  fn(x) { x + n }
+};
+
+let add5 = make_adder(5);
+let add100 = make_adder(100);
+display("");
+display("add5(10)   -> " + to_str(add5(10)));     // 15
+display("add100(10) -> " + to_str(add100(10)));   // 110

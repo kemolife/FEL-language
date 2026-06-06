@@ -1,0 +1,128 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php'] as $autoload) {
+    if (file_exists($autoload)) { require $autoload; break; }
+}
+
+use Fel\Evaluator\EvaluatorFactory;
+use Fel\Object\Environment;
+use Fel\Object\Type\{ErrorObject, NullObject};
+use Fel\Parser\ParserFactory;
+use Fel\Repl\Repl;
+
+$args = array_slice($argv, 1);
+
+if (empty($args)) {
+    (new Repl())->start();
+    exit(0);
+}
+
+$flag = $args[0];
+
+if ($flag === '--help' || $flag === '-h') {
+    echo <<<HELP
+    fel - FEL (Flexible Executed Language) interpreter
+
+    Usage:
+      fel                    Start REPL
+      fel <file.fel>         Execute a .fel file
+      fel --compile <file>   Compile to LLVM IR (outputs <file>.ll)
+      fel --version          Show version
+
+    Package commands:
+      fel add <package>      Add a package dependency and install it
+      fel remove <package>   Remove a package dependency
+      fel install            Install all dependencies from fel.toml
+      fel list               List installed packages
+
+    HELP;
+    exit(0);
+}
+
+if ($flag === '--version' || $flag === '-v') {
+    echo "fel 0.1.0\n";
+    exit(0);
+}
+
+if ($flag === '--compile') {
+    $file = $args[1] ?? null;
+    if (!$file) { fwrite(STDERR, "fel: --compile requires a file argument\n"); exit(1); }
+    if (!file_exists($file)) { fwrite(STDERR, "fel: cannot open '{$file}': no such file\n"); exit(1); }
+
+    $source  = file_get_contents($file);
+    $outFile = preg_replace('/\.fel$/', '.ll', $file);
+    if ($outFile === $file) $outFile = $file . '.ll';
+
+    try {
+        $compiler = new \Fel\Compiler\Compiler();
+        $ir = $compiler->compileFile($source, pathinfo($file, PATHINFO_FILENAME));
+        file_put_contents($outFile, $ir);
+        echo "Compiled to {$outFile}\n";
+        echo "Run: clang -O2 {$outFile} src/Compiler/Runtime/fel_runtime.c -o " . pathinfo($file, PATHINFO_FILENAME) . "\n";
+    } catch (\RuntimeException $e) {
+        fwrite(STDERR, $e->getMessage() . "\n");
+        exit(1);
+    }
+    exit(0);
+}
+
+if ($flag === 'add') {
+    $pkg = $args[1] ?? null;
+    if (!$pkg) { fwrite(STDERR, "fel add: requires package name\n"); exit(1); }
+    (new \Fel\Package\Installer(getcwd()))->add($pkg);
+    exit(0);
+}
+
+if ($flag === 'remove') {
+    $pkg = $args[1] ?? null;
+    if (!$pkg) { fwrite(STDERR, "fel remove: requires package name\n"); exit(1); }
+    (new \Fel\Package\Installer(getcwd()))->remove($pkg);
+    exit(0);
+}
+
+if ($flag === 'install') {
+    (new \Fel\Package\Installer(getcwd()))->installAll();
+    exit(0);
+}
+
+if ($flag === 'list') {
+    (new \Fel\Package\Installer(getcwd()))->listInstalled();
+    exit(0);
+}
+
+$file = $args[0];
+
+if (!file_exists($file)) {
+    fwrite(STDERR, "fel: cannot open '{$file}': no such file\n");
+    exit(1);
+}
+
+if (pathinfo($file, PATHINFO_EXTENSION) !== 'fel') {
+    fwrite(STDERR, "fel: file must have .fel extension\n");
+    exit(1);
+}
+
+$source  = file_get_contents($file);
+$parser  = ParserFactory::fromSource($source);
+$program = $parser->parseProgram();
+
+if ($errors = $parser->errors()) {
+    foreach ($errors as $err) fwrite(STDERR, "parse error: {$err}\n");
+    exit(1);
+}
+
+$env    = new Environment();
+$result = EvaluatorFactory::default()->eval($program, $env);
+
+if ($result instanceof ErrorObject) {
+    fwrite(STDERR, $result->inspect() . "\n");
+    exit(1);
+}
+
+if (!$result instanceof NullObject) {
+    echo $result->inspect() . "\n";
+}
+
+exit(0);

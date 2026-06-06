@@ -1,0 +1,10 @@
+{
+  "is_int":    fn(x) { type(x) == "INTEGER" },
+  "is_float":  fn(x) { type(x) == "FLOAT" },
+  "is_string": fn(x) { type(x) == "STRING" },
+  "is_bool":   fn(x) { type(x) == "BOOLEAN" },
+  "is_null":   fn(x) { type(x) == "NULL" },
+  "is_array":  fn(x) { type(x) == "ARRAY" },
+  "is_hash":   fn(x) { type(x) == "HASH" },
+  "is_fn":     fn(x) { type(x) == "FUNCTION" || type(x) == "BUILTIN" }
+}

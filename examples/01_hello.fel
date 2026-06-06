@@ -1,0 +1,27 @@
+// 01_hello.fel — Basics: variables, strings, display, arithmetic
+// Run: php bin/fel examples/01_hello.fel
+
+// `let` declares a variable. Variables can hold any value.
+let name = "FEL";
+let year = 2026;
+
+// `display(x)` prints x followed by a newline.
+display("Hello from " + name + "!");
+
+// Strings concatenate with `+`. Use to_str() to join non-strings.
+display("The year is " + to_str(year));
+
+// Arithmetic operators: + - * / % work as expected.
+let a = 7;
+let b = 3;
+display("7 + 3  = " + to_str(a + b));
+display("7 - 3  = " + to_str(a - b));
+display("7 * 3  = " + to_str(a * b));
+display("7 / 3  = " + to_str(a / b));   // integer division
+display("7 % 3  = " + to_str(a % b));   // modulo (remainder)
+
+// Variables can be reassigned (no `let` on reassignment).
+let counter = 0;
+counter = counter + 1;
+counter = counter + 1;
+display("counter = " + to_str(counter));

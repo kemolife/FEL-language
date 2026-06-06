@@ -1,0 +1,9 @@
+{
+  "now":       fn() { date_now() },
+  "format":    fn(ts, fmt) { date_format(ts, fmt) },
+  "parse":     fn(s) { date_parse(s) },
+  "diff":      fn(a, b) { date_diff(a, b) },
+  "add":       fn(ts, seconds) { date_add(ts, seconds) },
+  "today":     fn() { date_format(date_now(), "Y-m-d") },
+  "timestamp": fn() { date_now() }
+}

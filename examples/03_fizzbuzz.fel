@@ -1,0 +1,20 @@
+// 03_fizzbuzz.fel — Control flow: for-in, if/else, modulo
+// Run: php bin/fel examples/03_fizzbuzz.fel
+
+// Classic FizzBuzz from 1 to 20.
+// range(1, 21) yields 1..20 because the stop value is exclusive.
+for (n in range(1, 21)) {
+  if (n % 15 == 0) {
+    display("FizzBuzz");
+  } else {
+    if (n % 3 == 0) {
+      display("Fizz");
+    } else {
+      if (n % 5 == 0) {
+        display("Buzz");
+      } else {
+        display(to_str(n));
+      }
+    }
+  }
+}
