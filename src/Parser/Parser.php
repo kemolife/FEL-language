@@ -112,6 +112,7 @@ final class Parser {
         $tok = $this->stream->cur();
         if (!$this->expectPeek(TokenType::IDENT)) return null;
         $name = new Identifier($this->stream->cur(), $this->stream->cur()->literal);
+        $this->skipOptionalType();
         if (!$this->expectPeek(TokenType::ASSIGN)) return null;
         $this->stream->next();
         $value = $this->parseExpression(Precedence::LOWEST);
@@ -173,10 +174,12 @@ final class Parser {
         if ($this->stream->peekIs(TokenType::RBRACE)) return $names;
         if (!$this->expectPeek(TokenType::IDENT)) return $names;
         $names[] = $this->stream->cur()->literal;
+        $this->skipOptionalType();
         while ($this->stream->peekIs(TokenType::COMMA)) {
             $this->stream->next();
             $this->stream->next();
             $names[] = $this->stream->cur()->literal;
+            $this->skipOptionalType();
         }
         return $names;
     }
@@ -193,6 +196,7 @@ final class Parser {
         $name = $this->stream->cur()->literal;
         if (!$this->expectPeek(TokenType::LPAREN)) return null;
         $params = $this->parseFunctionParameters();
+        $this->skipOptionalType(); // optional return type
         if (!$this->expectPeek(TokenType::LBRACE)) return null;
         $body = $this->parseBlockStatement();
         return new MethodDefinition($tok, $recvVar, $recvType, $name, $params, $body);
@@ -438,6 +442,7 @@ final class Parser {
         $tok    = $this->stream->cur();
         if (!$this->expectPeek(TokenType::LPAREN)) return null;
         $params = $this->parseFunctionParameters();
+        $this->skipOptionalType(); // optional return type
         if (!$this->expectPeek(TokenType::LBRACE)) return null;
         $body = $this->parseBlockStatement();
         return new FunctionLiteral($tok, $params, $body);
@@ -452,13 +457,27 @@ final class Parser {
         }
         $this->stream->next();
         $params[] = new Identifier($this->stream->cur(), $this->stream->cur()->literal);
+        $this->skipOptionalType();
         while ($this->stream->peekIs(TokenType::COMMA)) {
             $this->stream->next();
             $this->stream->next();
             $params[] = new Identifier($this->stream->cur(), $this->stream->cur()->literal);
+            $this->skipOptionalType();
         }
         if (!$this->expectPeek(TokenType::RPAREN)) return [];
         return $params;
+    }
+
+    /** Optional Go-style `: Type` annotation — parsed and discarded (runtime is dynamic). */
+    private function skipOptionalType(): void {
+        if (!$this->stream->peekIs(TokenType::COLON)) return;
+        $this->stream->next(); // consume ':'
+        // array type prefix `[]`
+        if ($this->stream->peekIs(TokenType::LBRACKET)) {
+            $this->stream->next();
+            $this->expectPeek(TokenType::RBRACKET);
+        }
+        $this->expectPeek(TokenType::IDENT); // type name
     }
 
     private function parseCallExpression(Expression $fn): CallExpression {
