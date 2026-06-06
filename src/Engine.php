@@ -114,6 +114,9 @@ class Engine {
                 array_map(fn($p) => $this->toPhp($p->key), array_values($obj->pairs)),
                 array_map(fn($p) => $this->toPhp($p->value), array_values($obj->pairs))
             ),
+            $obj instanceof \Fel\Object\Type\StructInstanceObject => array_map(
+                fn($v) => $this->toPhp($v), $obj->fields
+            ),
             default => $obj->inspect(),
         };
     }

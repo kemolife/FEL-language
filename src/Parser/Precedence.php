@@ -33,6 +33,7 @@ final class Precedence {
         TokenType::LPAREN->value   => self::CALL,
         TokenType::LBRACKET->value => self::INDEX,
         TokenType::DOT->value      => self::INDEX,
+        TokenType::LBRACE->value   => self::CALL,
     ];
 
     public function of(TokenType $t): int {

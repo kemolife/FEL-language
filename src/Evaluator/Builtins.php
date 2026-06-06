@@ -6,6 +6,7 @@ use Fel\Object\{FelObject};
 use Fel\Object\Type\{
     IntegerObject, FloatObject, StringObject, BooleanObject, NullObject,
     ArrayObject, HashObject, ErrorObject, BuiltinObject, GeneratorObject,
+    StructInstanceObject, InterfaceObject,
 };
 
 class Builtins {
@@ -38,6 +39,17 @@ class Builtins {
             'display' => new BuiltinObject(function(FelObject ...$args): FelObject {
                 foreach ($args as $arg) echo $arg->inspect() . "\n";
                 return $this->null;
+            }),
+
+            'implements' => new BuiltinObject(function(FelObject ...$args): FelObject {
+                if (count($args) !== 2) return $this->err("implements: want 2 args (value, interface)");
+                [$value, $iface] = $args;
+                if (!$iface instanceof InterfaceObject) return $this->err("implements: 2nd arg must be an interface");
+                if (!$value instanceof StructInstanceObject) return $this->false;
+                foreach ($iface->methods as $m) {
+                    if (!isset($value->structType->methods[$m])) return $this->false;
+                }
+                return $this->true;
             }),
 
             'len' => new BuiltinObject(function(FelObject ...$args): FelObject {

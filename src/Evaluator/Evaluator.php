@@ -13,6 +13,7 @@ use Fel\Ast\Node\{
     ArrayLiteral, IndexExpression, HashLiteral,
     ImportStatement,
     TryExpression, ThrowStatement, MatchExpression,
+    StructDefinition, InterfaceDefinition, MethodDefinition, StructLiteral,
 };
 use Fel\Evaluator\Call\FunctionApplier;
 use Fel\Evaluator\Operator\{InfixOperations, PrefixOperations};
@@ -23,6 +24,7 @@ use Fel\Object\Type\{
     ReturnValue, ErrorObject, FunctionObject, BuiltinObject,
     ArrayObject, HashObject, HashPair, GeneratorObject,
     BreakValue, ContinueValue,
+    StructTypeObject, StructInstanceObject, InterfaceObject,
 };
 
 class Evaluator {
@@ -65,6 +67,10 @@ class Evaluator {
             $node instanceof ThrowStatement      => $this->evalThrowStatement($node, $env),
             $node instanceof TryExpression       => $this->evalTryExpression($node, $env),
             $node instanceof MatchExpression     => $this->evalMatchExpression($node, $env),
+            $node instanceof StructDefinition    => $this->evalStructDefinition($node, $env),
+            $node instanceof InterfaceDefinition => $this->evalInterfaceDefinition($node, $env),
+            $node instanceof MethodDefinition    => $this->evalMethodDefinition($node, $env),
+            $node instanceof StructLiteral       => $this->evalStructLiteral($node, $env),
             default => $this->values->null(),
         };
     }
@@ -250,7 +256,29 @@ class Evaluator {
             $pair = $left->pairs[$index->hashKey()] ?? null;
             return $pair?->value ?? $this->values->null();
         }
+        if ($left instanceof StructInstanceObject && $index instanceof StringObject) {
+            return $this->resolveStructMember($left, $index->value);
+        }
         return new ErrorObject("index operator not supported: {$left->type()->value}");
+    }
+
+    private function resolveStructMember(StructInstanceObject $inst, string $member): FelObject {
+        if (array_key_exists($member, $inst->fields)) {
+            return $inst->fields[$member];
+        }
+        $method = $inst->structType->methods[$member] ?? null;
+        if ($method !== null) {
+            // bind the receiver: enclose the method's definition env with recvVar = instance
+            $boundEnv = Environment::enclosed($method['fn']->env);
+            $boundEnv->set($method['recvVar'], $inst);
+            return new FunctionObject(
+                params:  $method['fn']->params,
+                body:    $method['fn']->body,
+                bodySrc: $method['fn']->bodySrc,
+                env:     $boundEnv,
+            );
+        }
+        return new ErrorObject("struct {$inst->structType->name} has no field or method {$member}");
     }
 
     private function evalHashLiteral(HashLiteral $node, Environment $env): FelObject {
@@ -266,6 +294,55 @@ class Evaluator {
             $pairs[$key->hashKey()] = new HashPair($key, $value);
         }
         return new HashObject($pairs);
+    }
+
+    private function evalStructDefinition(StructDefinition $node, Environment $env): FelObject {
+        $env->set($node->name, new StructTypeObject($node->name, $node->fields));
+        return $this->values->null();
+    }
+
+    private function evalInterfaceDefinition(InterfaceDefinition $node, Environment $env): FelObject {
+        $env->set($node->name, new InterfaceObject($node->name, $node->methods));
+        return $this->values->null();
+    }
+
+    private function evalMethodDefinition(MethodDefinition $node, Environment $env): FelObject {
+        $structType = $env->get($node->receiverType);
+        if (!$structType instanceof StructTypeObject) {
+            return new ErrorObject("cannot define method on unknown struct: {$node->receiverType}");
+        }
+        $params  = array_map(fn($p) => $p->value, $node->parameters);
+        $body    = $node->body;
+        $eval    = $this;
+        $fn = new FunctionObject(
+            params:  $params,
+            body:    fn(Environment $callEnv): FelObject => $eval->eval($body, $callEnv),
+            bodySrc: $body->string(),
+            env:     $env,
+        );
+        $structType->methods[$node->name] = ['recvVar' => $node->receiverVar, 'fn' => $fn];
+        return $this->values->null();
+    }
+
+    private function evalStructLiteral(StructLiteral $node, Environment $env): FelObject {
+        $structType = $env->get($node->typeName);
+        if (!$structType instanceof StructTypeObject) {
+            return new ErrorObject("unknown struct type: {$node->typeName}");
+        }
+        $fields = [];
+        foreach ($node->fields as $name => $expr) {
+            if (!$structType->hasField($name)) {
+                return new ErrorObject("struct {$structType->name} has no field {$name}");
+            }
+            $val = $this->eval($expr, $env);
+            if ($val instanceof ErrorObject) return $val;
+            $fields[$name] = $val;
+        }
+        // default unspecified fields to null
+        foreach ($structType->fields as $f) {
+            if (!array_key_exists($f, $fields)) $fields[$f] = $this->values->null();
+        }
+        return new StructInstanceObject($structType, $fields);
     }
 
     private function evalThrowStatement(ThrowStatement $node, Environment $env): FelObject {

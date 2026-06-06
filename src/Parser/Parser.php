@@ -12,6 +12,7 @@ use Fel\Ast\Node\{
     ArrayLiteral, IndexExpression, HashLiteral,
     ImportStatement,
     TryExpression, ThrowStatement, MatchExpression,
+    StructDefinition, InterfaceDefinition, MethodDefinition, StructLiteral,
 };
 use Fel\Ast\{Expression, Statement};
 use Fel\Token\{Token, TokenType};
@@ -67,6 +68,7 @@ final class Parser {
         $this->infixFns[TokenType::LPAREN->value]   = fn(Expression $fn)   => $this->parseCallExpression($fn);
         $this->infixFns[TokenType::LBRACKET->value] = fn(Expression $left) => $this->parseIndexExpression($left);
         $this->infixFns[TokenType::DOT->value]      = fn(Expression $left) => $this->parseDotAccess($left);
+        $this->infixFns[TokenType::LBRACE->value]   = fn(Expression $left) => $this->parseStructLiteral($left);
     }
 
     public function parseProgram(): Program {
@@ -84,14 +86,23 @@ final class Parser {
     public function errors(): array { return $this->errors; }
 
     private function parseStatement(): ?Statement {
+        // method definition: `fn (recv Type) name(...) {...}` (two idents inside first paren)
+        if ($this->stream->curIs(TokenType::FUNCTION)
+            && $this->stream->peekIs(TokenType::LPAREN)
+            && $this->stream->peekAt(2)->type === TokenType::IDENT
+            && $this->stream->peekAt(3)->type === TokenType::IDENT) {
+            return $this->parseMethodDefinition();
+        }
         return match($this->stream->cur()->type) {
-            TokenType::LET      => $this->parseLetStatement(),
-            TokenType::RETURN   => $this->parseReturnStatement(),
-            TokenType::IMPORT   => $this->parseImportStatement(),
-            TokenType::BREAK    => $this->parseBreakStatement(),
-            TokenType::CONTINUE => $this->parseContinueStatement(),
-            TokenType::THROW    => $this->parseThrowStatement(),
-            default             => $this->parseExpressionStatementOrAssign(),
+            TokenType::LET       => $this->parseLetStatement(),
+            TokenType::RETURN    => $this->parseReturnStatement(),
+            TokenType::IMPORT    => $this->parseImportStatement(),
+            TokenType::BREAK     => $this->parseBreakStatement(),
+            TokenType::CONTINUE  => $this->parseContinueStatement(),
+            TokenType::THROW     => $this->parseThrowStatement(),
+            TokenType::STRUCT    => $this->parseStructDefinition(),
+            TokenType::INTERFACE => $this->parseInterfaceDefinition(),
+            default              => $this->parseExpressionStatementOrAssign(),
         };
     }
 
@@ -133,6 +144,76 @@ final class Parser {
         'SLASH_ASSIGN'    => '/',
         'PERCENT_ASSIGN'  => '%',
     ];
+
+    private function parseStructDefinition(): ?StructDefinition {
+        $tok = $this->stream->cur();
+        if (!$this->expectPeek(TokenType::IDENT)) return null;
+        $name = $this->stream->cur()->literal;
+        if (!$this->expectPeek(TokenType::LBRACE)) return null;
+        $fields = $this->parseIdentList();
+        if (!$this->expectPeek(TokenType::RBRACE)) return null;
+        return new StructDefinition($tok, $name, $fields);
+    }
+
+    private function parseInterfaceDefinition(): ?InterfaceDefinition {
+        $tok = $this->stream->cur();
+        if (!$this->expectPeek(TokenType::IDENT)) return null;
+        $name = $this->stream->cur()->literal;
+        if (!$this->expectPeek(TokenType::LBRACE)) return null;
+        $methods = $this->parseIdentList();
+        if (!$this->expectPeek(TokenType::RBRACE)) return null;
+        return new InterfaceDefinition($tok, $name, $methods);
+    }
+
+    /** Parse a comma-separated list of bare identifiers up to (not including) the closing brace. */
+    private function parseIdentList(): array {
+        $names = [];
+        if ($this->stream->peekIs(TokenType::RBRACE)) return $names;
+        if (!$this->expectPeek(TokenType::IDENT)) return $names;
+        $names[] = $this->stream->cur()->literal;
+        while ($this->stream->peekIs(TokenType::COMMA)) {
+            $this->stream->next();
+            $this->stream->next();
+            $names[] = $this->stream->cur()->literal;
+        }
+        return $names;
+    }
+
+    private function parseMethodDefinition(): ?MethodDefinition {
+        $tok = $this->stream->cur();
+        if (!$this->expectPeek(TokenType::LPAREN)) return null;
+        if (!$this->expectPeek(TokenType::IDENT)) return null;
+        $recvVar = $this->stream->cur()->literal;
+        if (!$this->expectPeek(TokenType::IDENT)) return null;
+        $recvType = $this->stream->cur()->literal;
+        if (!$this->expectPeek(TokenType::RPAREN)) return null;
+        if (!$this->expectPeek(TokenType::IDENT)) return null;
+        $name = $this->stream->cur()->literal;
+        if (!$this->expectPeek(TokenType::LPAREN)) return null;
+        $params = $this->parseFunctionParameters();
+        if (!$this->expectPeek(TokenType::LBRACE)) return null;
+        $body = $this->parseBlockStatement();
+        return new MethodDefinition($tok, $recvVar, $recvType, $name, $params, $body);
+    }
+
+    private function parseStructLiteral(Expression $left): ?StructLiteral {
+        if (!$left instanceof Identifier) {
+            $this->errors[] = "struct literal requires a type name (line {$this->stream->cur()->line})";
+            return null;
+        }
+        $tok    = $this->stream->cur(); // LBRACE
+        $fields = [];
+        while (!$this->stream->peekIs(TokenType::RBRACE)) {
+            if (!$this->expectPeek(TokenType::IDENT)) return null;
+            $fieldName = $this->stream->cur()->literal;
+            if (!$this->expectPeek(TokenType::COLON)) return null;
+            $this->stream->next();
+            $fields[$fieldName] = $this->parseExpression(Precedence::LOWEST);
+            if (!$this->stream->peekIs(TokenType::RBRACE) && !$this->expectPeek(TokenType::COMMA)) return null;
+        }
+        if (!$this->expectPeek(TokenType::RBRACE)) return null;
+        return new StructLiteral($tok, $left->value, $fields);
+    }
 
     private function parseThrowStatement(): ?ThrowStatement {
         $tok = $this->stream->cur();
